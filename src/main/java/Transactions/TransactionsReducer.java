@@ -1,49 +1,28 @@
 package Transactions;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.TreeMap;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
+import java.io.IOException;
+import java.util.Iterator;
 
-public class TransactionsReducer extends Reducer<Text,
-        LongWritable, LongWritable, Text> {
-    private TreeMap<Long, String> tmap2;
-    @Override
-    public void setup(Context context) throws IOException,
-            InterruptedException
-    {
-        tmap2 = new TreeMap<Long, String>();
-    }
+public class TransactionsReducer extends MapReduceBase implements org.apache.hadoop.mapred.Reducer<Text, IntWritable, Text, IntWritable> {
 
     @Override
-    public void reduce(Text key, Iterable<LongWritable> values,
-                       Context context) throws IOException, InterruptedException
-    {
+    public void reduce(Text key, Iterator<IntWritable> values, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
+        System.out.println("************************");
+        System.out.println("This is from the reducer");
+        System.out.println("Key: " + key.toString());
+        System.out.println("************************");
 
-        String name = key.toString();
-        long count = 0;
-        for (LongWritable val : values)
-        {
-            count = val.get();
+        int sum = 0;
+        while(values.hasNext()){
+            IntWritable currentRevenue = values.next();
+            System.out.println("The content of values now: "+ currentRevenue.get());
+            sum += currentRevenue.get();
         }
-        tmap2.put(count, name);
-        if (tmap2.size() > 10)
-        {
-            tmap2.remove(tmap2.firstKey());
-        }
-    }
-
-    @Override
-    public void cleanup(Context context) throws IOException,
-            InterruptedException
-    {
-        for (Map.Entry<Long, String> entry : tmap2.entrySet())
-        {
-            long count = entry.getKey();
-            String name = entry.getValue();
-            context.write(new LongWritable(count), new Text(name));
-        }
+        output.collect(key, new IntWritable(sum));
     }
 }

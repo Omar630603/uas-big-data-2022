@@ -1,43 +1,38 @@
 package Transactions;
 
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.mapred.*;
+
+
+import java.io.IOException;
 
 public class Driver {
 
-    public static void main(String[] args) throws Exception
+    public static void main( String[] args )
     {
-        Configuration conf = new Configuration();
-        String[] otherArgs = new GenericOptionsParser(conf,
-                args).getRemainingArgs();
-        if (otherArgs.length < 2)
-        {
-            System.err.println("Error: please provide two paths");
-            System.exit(2);
+        JobConf conf = new JobConf(Driver.class);
+        conf.setJobName("Tesla");
+
+        conf.setOutputKeyClass(Text.class);
+        conf.setOutputValueClass(IntWritable.class);
+
+        conf.setMapperClass(TransactionsMapper.class);
+        conf.setCombinerClass(TransactionsReducer.class);
+        conf.setReducerClass(TransactionsReducer.class);
+
+        conf.setInputFormat(TextInputFormat.class);
+        conf.setOutputFormat(TextOutputFormat.class);
+
+        FileInputFormat.setInputPaths(conf, new Path(args[0]));
+        FileOutputFormat.setOutputPath(conf, new Path(args[1]));
+
+        try {
+            JobClient.runJob(conf);
+        }catch(IOException e) {
+            e.printStackTrace();
         }
-
-        Job job = Job.getInstance(conf, "top 10");
-        job.setJarByClass(Driver.class);
-
-        job.setMapperClass(TransactionsMapper.class);
-        job.setReducerClass(TransactionsReducer.class);
-
-        job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(LongWritable.class);
-
-        job.setOutputKeyClass(LongWritable.class);
-        job.setOutputValueClass(Text.class);
-
-        FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
-        FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
-
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }

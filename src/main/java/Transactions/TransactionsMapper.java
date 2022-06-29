@@ -1,44 +1,31 @@
 package Transactions;
 
-import java.io.*;
-import java.util.*;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
 
-public class TransactionsMapper extends Mapper<Object,
-        Text, Text, LongWritable> {
-    private TreeMap<Long, String> tmap;
-    @Override
-    public void setup(Context context) throws IOException, InterruptedException
-    {
-        tmap = new TreeMap<Long, String>();
-    }
-    @Override
-    public void map(Object key, Text value,
-                    Context context) throws IOException,
-            InterruptedException
-    {
-        String[] tokens = value.toString().split("/");
+import java.io.IOException;
+public class TransactionsMapper extends MapReduceBase implements org.apache.hadoop.mapred.Mapper<LongWritable, Text, Text, IntWritable> {
 
-        String insider_name = tokens[0];
-        long values = Long.parseLong(tokens[6]);
-        tmap.put(values, insider_name);
-        if (tmap.size() > 10)
-        {
-            tmap.remove(tmap.firstKey());
-        }
-    }
+    private IntWritable revenueWriteable = new IntWritable(0);
+    private Text cityText = new Text();
 
     @Override
-    public void cleanup(Context context) throws IOException,
-            InterruptedException
-    {
-        for (Map.Entry<Long, String> entry : tmap.entrySet())
-        {
-            long count = entry.getKey();
-            String name = entry.getValue();
-            context.write(new Text(name), new LongWritable(count));
+    public void map(LongWritable key, Text value, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
+        String line = value.toString();
+        System.out.println("This is the content of line");
+        System.out.println(line);
+
+        String[] tokens = line.split("\t");
+        String insider_name = tokens[0].trim();
+        if(tokens[6].matches("\\d+\\.\\d+")) {
+            int values = (int) Double.parseDouble(tokens[6]);
+            this.cityText.set(insider_name);
+            this.revenueWriteable.set(values);
+            output.collect(this.cityText, this.revenueWriteable);
         }
     }
 }
